@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Kenneth Tan Xin You's Project 1</title>
+
+</head>
+<body>
+
+<script src="js/gpu.js?nocache"></script>
+<script src="js/decls.js?nocache"></script>
+
+<div>
+    <input type="button" value="Using CPU" onclick="return change(this);"/>
+</div>
+<div>
+    <input type="button" value="No Embossed" onclick="return changeEmbossedFilter(this);"/>
+    <input type="button" value="No Darken" onclick="return changeDarkenFilter(this);"/>
+    <input type="button" value="No Greenized" onclick="return changeGreenizedFilter(this);"/>
+    <input type="button" value="No ReflectX" onclick="return changeReflectXFilter(this);"/>
+</div>
+<div>
+    <input type="button" value="No SlideToLeft" onclick="return changeSlideToLeft(this);"/>
+    <input type="button" value="No MosaicY" onclick="return changeYMosaic(this);"/>
+    <input type="button" value="No MosaicX" onclick="return changeXMosaic(this);"/>
+    <input type="button" value="No MosaicXY" onclick="return changeXYMosaic(this);"/>
+</div>
+
+<div>fps = <div id="fps"></div></div>
+<div>highest fps = <div id="highestfps"></div></div>
+
+<img id="backimage" src="./images/image2.jpg" onload="loadImage()" width="800" height="600">
+<canvas id="backimageCanvas" width="800" height="600"></canvas>
+
+    <script src="ui.js?nocache"></script>
+    <script src="kerneldefs.js?nocache"></script>
+
+
+    <script>
+        var myKernelAnim = makeAnim("gpu");
+        var marquee = makeAnimator("gpu");
+        var orig;
+        var afterload = false;
+        var animIndex = 0;
+        var animYIndex = 0;
+        var animXIndex = 0;
+        var canvas = myKernelAnim.getCanvas();
+
+        var mosaicYAnim = makeFilter("gpu",mosaicY);
+        var mosaicXAnim = makeFilter("gpu",mosaicX);
+        var mosaicXYAnim = makeFilter("gpu",mosaicXY);
+
+        var darkenFilters = [makeFilter("cpu", darken), makeFilter("gpu", darken)];
+        var embossedFilters = [makeFilter("cpu", embossed),makeFilter("gpu", embossed)];
+        var embossedFilters2 = [makeFilter("cpu", embossed),makeFilter("gpu", embossed)];
+        var reflectXFilters = [makeFilter("cpu", reflectX), makeFilter("gpu", reflectX)];
+        var greenizedFilters = [makeFilter("cpu", greenized),makeFilter("gpu", greenized)];
+
+        document.getElementsByTagName('body')[0].appendChild(canvas);
+
+        var f = document.querySelector("#fps");
+        var maxF = document.querySelector("#highestfps");
+        function renderLoop() {
+            f.innerHTML = fps.getFPS();
+            var A;
+            var B;
+            if (loadedImage) {
+                orig = myKernelAnim(arr);
+                loadedImage = false;
+                afterload = true;
+            }
+
+            A = orig;
+            B = A;
+            if (slideToLeft===1) {
+                A = marquee(orig, animIndex);
+                animIndex = (animIndex + 1) % 800;
+            }
+            if(mosaicXYFiltering===1){
+                B = mosaicXYAnim(A,animXIndex,animYIndex);
+                animXIndex = (animXIndex + 1) % 800;
+                animYIndex = (animYIndex + 1) % 600;
+                A = B;
+            }
+            if (mosaicYFiltering===1){
+                B = mosaicYAnim(A,animYIndex);
+                animYIndex = (animYIndex + 1) % 600;
+                A = B;
+            }
+            if (mosaicXFiltering===1){
+
+                B = mosaicXAnim(A,animXIndex);
+                animXIndex = (animXIndex + 1) % 800;
+                A = B;
+            }
+
+            if (embossedFiltering === 1) {
+                B = embossedFilters[selection](A);
+                A = embossedFilters2[selection](B);
+            }
+            if (greenizedFiltering === 1) {
+                B = greenizedFilters[selection](A);
+                A = B;
+            }
+            if (darkenFiltering === 1) {
+                B = darkenFilters[selection](A);
+                A = B;
+            }
+            if (reflectXFiltering === 1) {
+                B = reflectXFilters[selection](A);
+                A = B;
+            }
+
+            var X = A;
+
+            var E = toimg(X);
+            if (selection === 1) {
+                A.delete();
+                X.delete();
+            }
+            if (firsttime) {
+                firsttime = false;
+                var cv = document.getElementsByTagName("canvas")[0];
+                var bdy = cv.parentNode;
+                var newCanvas = toimg.getCanvas();
+                bdy.replaceChild(newCanvas, cv);
+            }
+
+            maxF.innerHTML = fps.getMaxFPS();
+
+//      setTimeout(renderLoop,1);            // Uncomment this line, and comment the next line
+            requestAnimationFrame(renderLoop);     // to see how fast this could run...
+
+        }
+        window.onload = renderLoop;
+
+    </script>
+
+</body>
+</html>
